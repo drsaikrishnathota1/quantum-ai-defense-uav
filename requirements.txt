@@ -1,2 +1,3 @@
 # Core Python standard library only for now
 # (math, json, random, pathlib, datetime are stdlib, no extra deps)
+matplotlib>=3.7.0
