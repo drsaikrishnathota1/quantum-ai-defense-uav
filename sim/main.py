@@ -6,6 +6,7 @@ import random
 from typing import List, Dict, Any
 
 from quantum_optimizer import placeholder_quantum_assignment
+from metrics import summarize_results, compare_summaries
 
 
 RESULTS_DIR = Path("results")
@@ -116,23 +117,6 @@ def ai_prioritized_greedy_assignment(scenario: Dict[str, Any]) -> List[Dict[str,
     return assignments
 
 
-def summarize_results(assignments: List[Dict[str, Any]]) -> Dict[str, float]:
-    if not assignments:
-        return {
-            "avg_distance": 0.0,
-            "max_distance": 0.0
-        }
-
-    distances = [a["distance"] for a in assignments]
-    avg_distance = sum(distances) / len(distances)
-    max_distance = max(distances)
-
-    return {
-        "avg_distance": avg_distance,
-        "max_distance": max_distance
-    }
-
-
 def main():
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
@@ -148,6 +132,9 @@ def main():
     quantum_assignments = placeholder_quantum_assignment(scenario, ranked_attackers)
     quantum_summary = summarize_results(quantum_assignments)
 
+    ai_vs_baseline = compare_summaries(baseline_summary, ai_summary)
+    quantum_vs_baseline = compare_summaries(baseline_summary, quantum_summary)
+
     result = {
         "run_id": run_id,
         "scenario": scenario,
@@ -158,15 +145,17 @@ def main():
         },
         "ai_prioritized": {
             "assignments": ai_assignments,
-            "summary": ai_summary
+            "summary": ai_summary,
+            "comparison_vs_baseline": ai_vs_baseline
         },
         "quantum_placeholder": {
             "assignments": quantum_assignments,
-            "summary": quantum_summary
+            "summary": quantum_summary,
+            "comparison_vs_baseline": quantum_vs_baseline
         },
         "note": (
-            "Quantum placeholder is separated into sim/quantum_optimizer.py so it can later "
-            "be replaced by a real quantum or quantum-inspired solver."
+            "Metrics are now separated into sim/metrics.py and the quantum placeholder "
+            "is separated into sim/quantum_optimizer.py for modular research expansion."
         )
     }
 
@@ -176,7 +165,9 @@ def main():
     print(f"[INFO] Simulation run complete. Saved: {out_file}")
     print("[INFO] Baseline summary:", baseline_summary)
     print("[INFO] AI-prioritized summary:", ai_summary)
+    print("[INFO] AI vs baseline:", ai_vs_baseline)
     print("[INFO] Quantum-placeholder summary:", quantum_summary)
+    print("[INFO] Quantum vs baseline:", quantum_vs_baseline)
 
 
 if __name__ == "__main__":
