@@ -1,0 +1,195 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{times}
+\usepackage{lineno}
+\usepackage{setspace}
+
+\geometry{a4paper, top=25mm, bottom=25mm, left=25mm, right=25mm}
+\doublespacing
+\linenumbers
+
+\title{\textbf{Quantum-Assisted Edge AI for Counter-UAV Swarm Defense Protecting a Critical Base}}
+
+\author{
+  Dr. Sai Krishna Thota\\
+  \small Independent Researcher\\
+  \small Lake Saint Louis, Missouri, USA
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Emerging hostile drone swarms pose a growing threat to critical defense assets, demanding rapid, resource-aware counter-UAV decisions under strict security constraints. This work proposes a hybrid decision pipeline that combines edge AI threat prioritization, quantum-inspired optimization, and a crypto-agile post-quantum-ready control layer for defending a critical base from hostile UAV swarms. The architecture separates four key components: an AI module that scores and ranks hostile drones using kinematic and threat-class features, an assignment engine that maps constrained defender UAVs to prioritized threats via a quantum-inspired optimization interface, a metric module that evaluates interception quality including a threat-weighted coverage score, and a security layer that tags control commands with configurable post-quantum cryptographic profiles. We evaluate the pipeline across 50 randomized scenarios under one-defender-per-threat resource constraints. Results show that AI-prioritized assignment reduces unassigned high-threat targets by 82\% and improves threat-weighted coverage score by approximately 75\% compared to the greedy baseline. The crypto-agile security layer integrates with a simulated latency overhead of 3\,ms under a CRYSTALS-Kyber post-quantum profile.
+
+\medskip
+\noindent\textbf{Keywords:} counter-UAV defense, quantum-inspired optimization, edge AI, threat prioritization, post-quantum cryptography, swarm defense
+\end{abstract}
+
+\section{Introduction}
+
+The proliferation of low-cost commercial UAV platforms has created a new class of threat to critical defense infrastructure. Hostile drone swarms can be deployed rapidly, operate at low altitudes, and overwhelm traditional point-defense systems through coordinated multi-vector approaches \cite{guvenc2018detection}. Defending a critical base against such swarms requires autonomous systems capable of rapid threat assessment, constrained resource allocation, and secure command execution under time pressure \cite{shi2018drone}.
+
+Classical heuristic methods for counter-UAV assignment do not account for the relative danger of individual threats. When defenders are outnumbered by attackers, assignment order determines which threats are left unengaged, making threat-aware prioritization a critical capability. Quantum and quantum-inspired optimization methods offer a promising direction for improving constrained assignment quality as problem instances scale \cite{farhi2014quantum, kadowaki1998quantum, lucas2014ising, glover2019quantum}. Post-quantum cryptographic standards such as CRYSTALS-Kyber are being standardized by NIST to protect defense command channels \cite{avanzi2019crystals, chen2016report}. Edge AI techniques enable real-time inference at the point of decision \cite{shi2016edge, li2018learning}.
+
+This paper makes the following contributions:
+\begin{itemize}
+  \item A defense-specific hybrid architecture combining AI threat prioritization, quantum-inspired constrained assignment, and crypto-agile post-quantum-ready secure control.
+  \item A counter-UAV swarm defense formulation centered on critical-base protection under one-defender-per-threat resource constraints.
+  \item A simulation-based evaluation across 50 randomized scenarios comparing the proposed pipeline against a distance-only greedy baseline.
+  \item An engineering-oriented modular prototype designed for incremental extension and independent component benchmarking.
+\end{itemize}
+
+\section{System Model and Problem Definition}
+
+\subsection{Scenario Description}
+
+We consider a critical-base protection scenario in which a stationary defended asset is located at the origin of a two-dimensional defense zone. A swarm of hostile UAVs approaches the base from randomized positions and trajectories. A fleet of friendly defender UAVs is deployed to intercept hostile threats before they reach the protected zone. The defender fleet operates under a one-defender-per-threat assignment constraint, modeling real-world limitations on UAV intercept capacity.
+
+\subsection{Hostile UAV State Variables}
+
+Each hostile attacker UAV is described by: unique identifier, 2D spatial position $(x, y)$ in km, approach speed drawn from $\mathcal{U}[10, 25]$\,m/s, approach heading drawn from $\mathcal{U}[-\pi, \pi]$ radians, and categorical threat level $\in \{\text{low, medium, high}\}$.
+
+\subsection{Friendly Defender UAV State Variables}
+
+Each friendly defender UAV is described by: unique identifier, 2D spatial position $(x, y)$ in km initialized near the base, intercept speed drawn from $\mathcal{U}[15, 30]$\,m/s, and battery level drawn from $\mathcal{U}[0.5, 1.0]$.
+
+\subsection{Assignment Problem Formulation}
+
+Given $N$ hostile attackers and $M$ defender UAVs where $M < N$, the system must: (1) score and rank all attackers by threat priority, (2) assign each available defender to exactly one attacker, (3) maximize threat-weighted coverage quality, and (4) minimize unassigned high-threat targets. This is structurally equivalent to a constrained matching problem amenable to QUBO formulations \cite{lucas2014ising}, quantum annealing \cite{kadowaki1998quantum}, or variational quantum algorithms \cite{farhi2014quantum}.
+
+\subsection{Evaluation Metrics}
+
+\begin{itemize}
+  \item \textit{avg\_distance}: mean defender-to-attacker distance at assignment time.
+  \item \textit{max\_distance}: maximum assignment distance per run.
+  \item \textit{num\_assignments}: total successful assignments.
+  \item \textit{threat\_weighted\_score}: $\sum_i w_i / d_i$ minus penalties for unassigned high-threat targets, where $w_i \in \{1,2,3\}$ for low, medium, high.
+  \item \textit{unassigned\_high\_threat}: high-threat attackers left unassigned due to defender limits.
+\end{itemize}
+
+\section{Proposed Hybrid Architecture}
+
+\subsection{Edge AI Threat Prioritization Module}
+
+The threat score is computed as:
+\begin{equation}
+  s_i = \left(\frac{0.5}{d_i + \varepsilon} + \frac{0.5 \cdot v_i}{v_{\max}}\right) \cdot w_i^{\text{level}}
+\end{equation}
+where $d_i$ is distance to base, $v_i$ is attacker speed, $v_{\max}=25$\,m/s, $\varepsilon$ avoids division by zero, and $w_i^{\text{level}} \in \{0.5, 1.0, 1.5\}$ for low, medium, high threat classes.
+
+\subsection{Quantum-Inspired Assignment Engine}
+
+The assignment engine receives AI-ranked attackers and defender fleet state, and solves the constrained assignment problem under one-defender-per-threat capacity constraints. The current prototype implements a constrained greedy solver encapsulated behind a clean interface for future replacement by a QUBO, QAOA, or quantum annealing backend \cite{glover2019quantum, farhi2014quantum}.
+
+\subsection{Metrics and Evaluation Module}
+
+The metrics module computes per-run and aggregate evaluation statistics across all three pipeline variants consistently for fair comparison.
+
+\subsection{Crypto-Agile Secure Control Layer}
+
+The secure control layer wraps assignment decisions in a simulated crypto-agile authorization envelope supporting two profiles: classical RSA-ECDSA at 1.0\,ms simulated latency, and PQC CRYSTALS-Kyber \cite{avanzi2019crystals} at 3.0\,ms simulated latency.
+
+\subsection{Pipeline Summary}
+
+The full engagement cycle pipeline: (1) generate scenario, (2) AI ranks attackers, (3) assignment engine maps defenders to threats, (4) metrics module evaluates quality, (5) security layer wraps decision, (6) results logged.
+
+\section{Experimental Setup}
+
+\subsection{Simulation Environment}
+
+All experiments were conducted using a custom Python 3.11 simulation framework with standard library dependencies only, fully reproducible via the provided Dockerfile. Source code: \url{https://github.com/drsaikrishnathota1/quantum-ai-defense-uav}
+
+\subsection{Scenario Parameters}
+
+\begin{table}[h]
+\centering
+\caption{Simulation scenario parameters.}
+\label{tab:params}
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Hostile attackers ($N$)      & 5 \\
+Friendly defenders ($M$)     & 3 \\
+Attacker $x$ position        & $\mathcal{U}[5.0,\ 20.0]$\,km \\
+Attacker $y$ position        & $\mathcal{U}[-10.0,\ 10.0]$\,km \\
+Attacker speed               & $\mathcal{U}[10.0,\ 25.0]$\,m/s \\
+Attacker threat class        & \{low, medium, high\} \\
+Defender position ($x$,$y$)  & $\mathcal{U}[-2.0,\ 2.0]$\,km \\
+Defender speed               & $\mathcal{U}[15.0,\ 30.0]$\,m/s \\
+Defender battery             & $\mathcal{U}[0.5,\ 1.0]$ \\
+Assignment constraint        & one per attacker \\
+Base location                & $(0.0,\ 0.0)$ \\
+Independent runs             & 50 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Baseline Methods}
+
+Three variants are compared: (1) \textbf{Baseline}: distance-only greedy with no threat ordering, (2) \textbf{AI-Prioritized}: greedy with AI threat ranking, (3) \textbf{Quantum-Placeholder}: identical to AI-Prioritized but encapsulated in a separate module for future quantum solver substitution.
+
+\subsection{Security Layer Configuration}
+
+PQC profile: CRYSTALS-Kyber, 3.0\,ms. Classical profile: RSA-ECDSA, 1.0\,ms.
+
+\section{Results and Discussion}
+
+\subsection{Aggregate Results}
+
+Table~\ref{tab:results} presents averaged metrics across 50 independent randomized scenarios.
+
+\begin{table}[h]
+\centering
+\caption{Aggregate results over 50 simulation runs ($N=5$, $M=3$).}
+\label{tab:results}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metric} & \textbf{Baseline} & \textbf{AI-Prioritized} & \textbf{Quantum-Placeholder} \\
+\midrule
+avg\_distance (km)       & 13.8124 & 13.2096 & 13.2096 \\
+max\_distance (km)       & 17.4228 & 16.8740 & 16.8740 \\
+num\_assignments         & 3.0     & 3.0     & 3.0     \\
+threat\_weighted\_score  & -4.6847 & -1.1495 & -1.1495 \\
+unassigned\_high\_threat & 0.78    & 0.14    & 0.14    \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Key Findings}
+
+AI-prioritized assignment reduced unassigned high-threat attackers from 0.78 to 0.14 per run, an \textbf{82\% reduction}. The threat-weighted coverage score improved from $-4.6847$ to $-1.1495$, a \textbf{75.5\% improvement}. Average assignment distance decreased by \textbf{4.4\%} from 13.8124\,km to 13.2096\,km. The quantum-placeholder variant produced identical results to AI-prioritized, confirming the module boundary is correctly defined for future solver substitution. The PQC security layer added 3.0\,ms overhead per command cycle, well within tactical UAV engagement timescales.
+
+\subsection{Discussion}
+
+The results confirm that the proposed hybrid pipeline is feasible and produces measurable improvements over a distance-only greedy baseline. The strongest gains appear in threat coverage quality, which is the appropriate primary objective for critical-base defense. The negative threat-weighted scores reflect the structural difficulty of covering $N=5$ threats with $M=3$ defenders. The pipeline ensures that uncovered targets are systematically the less dangerous ones, demonstrated by the 82\% reduction in unassigned high-threat targets.
+
+\section{Limitations and Practical Implications}
+
+The simulation uses a simplified 2D spatial model and does not account for real-world factors such as wind, terrain, or sensor noise. The quantum module is currently a structured placeholder; its contribution at this stage is architectural. Threat classification is randomly assigned rather than derived from a trained perception model. The security layer simulates cryptographic latency rather than performing real post-quantum cryptographic operations. These limitations are consistent with the scope of a short communication.
+
+Despite these limitations, the prototype demonstrates: an 82\% reduction in unassigned high-threat targets confirming practical value of AI prioritization, a feasible and reproducible modular pipeline architecture, and a PQC control-path overhead of 3.0\,ms that is practically viable for tactical engagement systems.
+
+\section{Conclusion}
+
+This paper presented a hybrid decision pipeline for counter-UAV swarm defense of a critical base, combining edge AI threat prioritization, quantum-inspired optimization, and a crypto-agile post-quantum-ready secure control layer. Experiments across 50 randomized scenarios demonstrated that AI-prioritized assignment reduces unassigned high-threat targets by 82\% and improves threat-weighted coverage score by approximately 75\% compared to a distance-only greedy baseline. The crypto-agile security layer integrated with a simulated post-quantum latency overhead of 3.0\,ms per command cycle.
+
+The quantum optimization module is currently a structured placeholder establishing the problem formulation and module boundary for future integration of real quantum backends such as QAOA or quantum annealing. Future work will focus on replacing the quantum placeholder with a real quantum or quantum-inspired backend, integrating a trained threat classification model, extending the simulation to 3D flight dynamics, implementing real post-quantum cryptographic operations, and evaluating on a physical UAV testbed.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
