@@ -44,25 +44,33 @@ def generate_scenario(num_attackers=5, num_defenders=3):
 
 def greedy_assignment(scenario):
     assignments = []
+    available_defenders = {d["id"]: d for d in scenario["defenders"]}
+
     for attacker in scenario["attackers"]:
+        if not available_defenders:
+            break
+
         best_def = None
         best_dist = float("inf")
 
-        for defender in scenario["defenders"]:
+        for defender_id, defender in available_defenders.items():
             dx = attacker["x"] - defender["x"]
             dy = attacker["y"] - defender["y"]
             dist = (dx ** 2 + dy ** 2) ** 0.5
 
             if dist < best_dist:
                 best_dist = dist
-                best_def = defender["id"]
+                best_def = defender_id
 
         assignments.append({
             "attacker_id": attacker["id"],
             "defender_id": best_def,
             "distance": best_dist,
-            "optimizer": "greedy_baseline"
+            "optimizer": "greedy_baseline_constrained"
         })
+
+        del available_defenders[best_def]
+
     return assignments
 
 def ai_prioritized_greedy_assignment(scenario):
@@ -70,29 +78,35 @@ def ai_prioritized_greedy_assignment(scenario):
         scenario["attackers"],
         scenario["base"]
     )
-    defenders = scenario["defenders"]
+
+    available_defenders = {d["id"]: d for d in scenario["defenders"]}
     assignments = []
 
     for attacker in ranked_attackers:
+        if not available_defenders:
+            break
+
         best_def = None
         best_dist = float("inf")
 
-        for defender in defenders:
+        for defender_id, defender in available_defenders.items():
             dx = attacker["x"] - defender["x"]
             dy = attacker["y"] - defender["y"]
             dist = (dx ** 2 + dy ** 2) ** 0.5
 
             if dist < best_dist:
                 best_dist = dist
-                best_def = defender["id"]
+                best_def = defender_id
 
         assignments.append({
             "attacker_id": attacker["id"],
             "defender_id": best_def,
             "distance": best_dist,
             "threat_score": attacker["threat_score"],
-            "optimizer": "ai_prioritized_greedy"
+            "optimizer": "ai_prioritized_greedy_constrained"
         })
+
+        del available_defenders[best_def]
 
     return assignments
 
@@ -147,7 +161,7 @@ def main():
             "comparison_vs_baseline": quantum_vs_baseline
         },
         "security_layer": secured_command,
-        "note": "Modular pipeline with AI, quantum placeholder, metrics, and security layer."
+        "note": "Constrained one-defender-per-assignment pipeline with modular AI, quantum placeholder, metrics, and security layer."
     }
 
     out_file = RESULTS_DIR / f"run_{run_id}.json"
