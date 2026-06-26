@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[INFO] Running placeholder counter-UAV simulation..."
+echo "[INFO] Running counter-UAV defense simulation..."
 mkdir -p results
 
 python3 sim/main.py
 
-echo "[INFO] Done. Check the results/ directory for JSON output."
+echo "[INFO] Experiment finished."
+echo "[INFO] Check the results/ directory for JSON outputs."
