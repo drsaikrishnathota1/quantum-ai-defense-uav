@@ -3,18 +3,16 @@ from datetime import datetime, timezone
 import json
 import math
 import random
-from typing import List, Dict, Any
 
 from ai_threat_model import rank_attackers_by_threat
 from quantum_optimizer import placeholder_quantum_assignment
 from metrics import summarize_results, compare_summaries
-
+from security_layer import apply_security_profile
 
 RESULTS_DIR = Path("results")
 RESULTS_DIR.mkdir(exist_ok=True)
 
-
-def generate_scenario(num_attackers: int = 5, num_defenders: int = 3) -> Dict[str, Any]:
+def generate_scenario(num_attackers=5, num_defenders=3):
     base = {"x": 0.0, "y": 0.0}
 
     attackers = []
@@ -44,19 +42,21 @@ def generate_scenario(num_attackers: int = 5, num_defenders: int = 3) -> Dict[st
         "defenders": defenders
     }
 
-
-def greedy_assignment(scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
+def greedy_assignment(scenario):
     assignments = []
     for attacker in scenario["attackers"]:
         best_def = None
         best_dist = float("inf")
+
         for defender in scenario["defenders"]:
             dx = attacker["x"] - defender["x"]
             dy = attacker["y"] - defender["y"]
             dist = (dx ** 2 + dy ** 2) ** 0.5
+
             if dist < best_dist:
                 best_dist = dist
                 best_def = defender["id"]
+
         assignments.append({
             "attacker_id": attacker["id"],
             "defender_id": best_def,
@@ -65,22 +65,27 @@ def greedy_assignment(scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
         })
     return assignments
 
-
-def ai_prioritized_greedy_assignment(scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
-    ranked_attackers = rank_attackers_by_threat(scenario["attackers"], scenario["base"])
+def ai_prioritized_greedy_assignment(scenario):
+    ranked_attackers = rank_attackers_by_threat(
+        scenario["attackers"],
+        scenario["base"]
+    )
     defenders = scenario["defenders"]
-
     assignments = []
+
     for attacker in ranked_attackers:
         best_def = None
         best_dist = float("inf")
+
         for defender in defenders:
             dx = attacker["x"] - defender["x"]
             dy = attacker["y"] - defender["y"]
             dist = (dx ** 2 + dy ** 2) ** 0.5
+
             if dist < best_dist:
                 best_dist = dist
                 best_def = defender["id"]
+
         assignments.append({
             "attacker_id": attacker["id"],
             "defender_id": best_def,
@@ -88,14 +93,17 @@ def ai_prioritized_greedy_assignment(scenario: Dict[str, Any]) -> List[Dict[str,
             "threat_score": attacker["threat_score"],
             "optimizer": "ai_prioritized_greedy"
         })
-    return assignments
 
+    return assignments
 
 def main():
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     scenario = generate_scenario()
-    ranked_attackers = rank_attackers_by_threat(scenario["attackers"], scenario["base"])
+    ranked_attackers = rank_attackers_by_threat(
+        scenario["attackers"],
+        scenario["base"]
+    )
 
     baseline_assignments = greedy_assignment(scenario)
     baseline_summary = summarize_results(baseline_assignments)
@@ -103,8 +111,19 @@ def main():
     ai_assignments = ai_prioritized_greedy_assignment(scenario)
     ai_summary = summarize_results(ai_assignments)
 
-    quantum_assignments = placeholder_quantum_assignment(scenario, ranked_attackers)
+    quantum_assignments = placeholder_quantum_assignment(
+        scenario,
+        ranked_attackers
+    )
     quantum_summary = summarize_results(quantum_assignments)
+
+    secured_command = apply_security_profile(
+        {
+            "assignments": quantum_assignments,
+            "run_id": run_id
+        },
+        profile_name="pqc"
+    )
 
     ai_vs_baseline = compare_summaries(baseline_summary, ai_summary)
     quantum_vs_baseline = compare_summaries(baseline_summary, quantum_summary)
@@ -127,10 +146,8 @@ def main():
             "summary": quantum_summary,
             "comparison_vs_baseline": quantum_vs_baseline
         },
-        "note": (
-            "AI threat scoring is separated into sim/ai_threat_model.py, metrics are in "
-            "sim/metrics.py, and optimization is in sim/quantum_optimizer.py."
-        )
+        "security_layer": secured_command,
+        "note": "Modular pipeline with AI, quantum placeholder, metrics, and security layer."
     }
 
     out_file = RESULTS_DIR / f"run_{run_id}.json"
@@ -142,7 +159,8 @@ def main():
     print("[INFO] AI vs baseline:", ai_vs_baseline)
     print("[INFO] Quantum-placeholder summary:", quantum_summary)
     print("[INFO] Quantum vs baseline:", quantum_vs_baseline)
-
+    print("[INFO] Security profile used:", secured_command["profile"])
+    print("[INFO] Simulated security latency (ms):", secured_command["profile"]["simulated_latency_ms"])
 
 if __name__ == "__main__":
     main()
